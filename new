@@ -1,0 +1,144 @@
+function switchTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Deactivate all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content and activate button
+    document.getElementById(tabName + '-calculator').classList.add('active');
+    event.target.classList.add('active');
+}
+
+function calculatePPCMetrics() {
+    const dailyBudget = parseFloat(document.getElementById('daily-budget').value);
+    const targetAcos = parseFloat(document.getElementById('target-acos').value);
+    const avgCpc = parseFloat(document.getElementById('avg-cpc').value);
+    const days = parseInt(document.getElementById('days').value);
+
+    // Validation
+    if ([dailyBudget, targetAcos, avgCpc, days].some(isNaN)) {
+        alert('Please fill in all fields with valid numbers');
+        return;
+    }
+
+    if (dailyBudget < 0 || targetAcos < 0 || avgCpc < 0 || days < 1) {
+        alert('Please enter positive values');
+        return;
+    }
+
+    // Calculations
+    const totalBudget = dailyBudget * days;
+    const estimatedClicks = Math.floor((dailyBudget * days) / avgCpc);
+    const requiredSales = (totalBudget / (targetAcos / 100)).toFixed(2);
+
+    // Update results
+    animateNumber('total-budget', totalBudget);
+    animateNumber('estimated-clicks', estimatedClicks);
+    animateNumber('required-sales', requiredSales);
+}
+
+function planCampaign() {
+    const productPrice = parseFloat(document.getElementById('product-price').value);
+    const profitMargin = parseFloat(document.getElementById('profit-margin').value);
+    
+    if (isNaN(productPrice) || isNaN(profitMargin)) {
+        alert('Please enter valid product price and profit margin');
+        return;
+    }
+
+    const maxAcos = (profitMargin * 0.8).toFixed(2); // Recommended ACoS as 80% of profit margin
+    const recommendedDailyBudget = (productPrice * 0.2).toFixed(2); // 20% of product price
+
+    const recommendations = document.getElementById('campaign-recommendations');
+    recommendations.innerHTML = `
+        <h3>Campaign Recommendations</h3>
+        <p>Maximum Recommended ACoS: ${maxAcos}%</p>
+        <p>Suggested Daily Budget: $${recommendedDailyBudget}</p>
+        <p>Campaign Structure:</p>
+        <ul>
+            <li>Auto Campaign: $${(recommendedDailyBudget * 0.3).toFixed(2)} (30%)</li>
+            <li>Broad Match: $${(recommendedDailyBudget * 0.3).toFixed(2)} (30%)</li>
+            <li>Phrase Match: $${(recommendedDailyBudget * 0.2).toFixed(2)} (20%)</li>
+            <li>Exact Match: $${(recommendedDailyBudget * 0.2).toFixed(2)} (20%)</li>
+        </ul>
+    `;
+}
+
+function animateNumber(elementId, final) {
+    const element = document.getElementById(elementId);
+    const start = parseFloat(element.textContent.replace(/[^0-9.-]+/g, ''));
+    const target = parseFloat(final);
+    const duration = 1000; // Animation duration in milliseconds
+    const steps = 20;
+    const increment = (target - start) / steps;
+    let current = start;
+    let step = 0;
+
+    const animation = setInterval(() => {
+        step++;
+        current += increment;
+        
+        if (elementId === 'total-budget' || elementId === 'required-sales') {
+            element.textContent = `$${current.toFixed(2)}`;
+        } else {
+            element.textContent = Math.round(current);
+        }
+
+        if (step >= steps) {
+            clearInterval(animation);
+            if (elementId === 'total-budget' || elementId === 'required-sales') {
+                element.textContent = `$${target.toFixed(2)}`;
+            } else {
+                element.textContent = Math.round(target);
+            }
+        }
+    }, duration / steps);
+}
+
+function resetCalculator() {
+    const inputs = ['daily-budget', 'target-acos', 'avg-cpc', 'days'];
+    inputs.forEach(id => document.getElementById(id).value = '');
+    
+    const results = ['total-budget', 'estimated-clicks', 'required-sales'];
+    results.forEach(id => document.getElementById(id).textContent = '$0.00');
+}
+
+function resetPlanner() {
+    document.getElementById('product-price').value = '';
+    document.getElementById('profit-margin').value = '';
+    document.getElementById('campaign-recommendations').innerHTML = '';
+}
+
+function exportData() {
+    const dailyBudget = document.getElementById('daily-budget').value;
+    const targetAcos = document.getElementById('target-acos').value;
+    const avgCpc = document.getElementById('avg-cpc').value;
+    const days = document.getElementById('days').value;
+    
+    const data = {
+        'Daily Budget': dailyBudget,
+        'Target ACoS': targetAcos,
+        'Average CPC': avgCpc,
+        'Campaign Duration': days,
+        'Total Budget': document.getElementById('total-budget').textContent,
+        'Estimated Clicks': document.getElementById('estimated-clicks').textContent,
+        'Required Sales': document.getElementById('required-sales').textContent,
+        'Export Date': new Date().toLocaleDateString()
+    };
+
+    const csvContent = "data:text/csv;charset=utf-8," + 
+        Object.entries(data).map(([key, value]) => `${key},${value}`).join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "ppc_budget_plan.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
